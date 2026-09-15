@@ -58,47 +58,54 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // ファイル操作・UI制御
 // ==========================================
-function processFile(file) {
+async function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました"));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+async function processFile(file) {
     if (!file.name.toLowerCase().endsWith('.dbf')) {
         showAlert("DBFファイルを選択してください。");
         return;
     }
+    
     currentFileName = file.name;
     showLoading();
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const encoding = encodingSelect.value;
-            const parsed = DBFHandler.parse(e.target.result, encoding);
-            
-            originalFields = parsed.fields;
-            let tableData = parsed.data;
+    try {
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        const encoding = encodingSelect.value;
+        const parsed = DBFHandler.parse(arrayBuffer, encoding);
+        
+        originalFields = parsed.fields;
+        let tableData = parsed.data;
 
-            // データが空の場合の安全対策（1行分だけ空枠を作る）
-            if (tableData.length === 0) {
-                tableData = [Array(originalFields.length).fill("")];
-            }
-
-            // エディタを初期化
-            initEditor(spreadsheetContainer, tableData, originalFields);
-
-            // 画面の切り替え
-            uploadSection.classList.add('hidden');
-            editorSection.classList.remove('hidden');
-            actionButtons.classList.remove('hidden');
-            
-            // 初期表示時のボタン状態反映
-            triggerToolbarUpdate(spreadsheetContainer);
-
-        } catch (err) {
-            console.error(err);
-            showAlert("ファイルの読み込み中にエラーが発生しました。\n" + err.message);
-        } finally {
-            hideLoading();
+        // データが空の場合の安全対策（1行分だけ空枠を作る）
+        if (tableData.length === 0) {
+            tableData = [Array(originalFields.length).fill("")];
         }
-    };
-    reader.readAsArrayBuffer(file);
+
+        // エディタを初期化
+        initEditor(spreadsheetContainer, tableData, originalFields);
+
+        // 画面の切り替え
+        uploadSection.classList.add('hidden');
+        editorSection.classList.remove('hidden');
+        actionButtons.classList.remove('hidden');
+        
+        // 初期表示時のボタン状態反映
+        triggerToolbarUpdate(spreadsheetContainer);
+
+    } catch (err) {
+        console.error(err);
+        showAlert("ファイルの読み込み中にエラーが発生しました。\n" + err.message);
+    } finally {
+        hideLoading();
+    }
 }
 
 // 保存処理
