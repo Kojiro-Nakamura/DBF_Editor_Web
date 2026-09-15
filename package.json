@@ -17,12 +17,14 @@
     "@tailwindcss/vite": "^4.3.3",
     "autoprefixer": "^10.6.0",
     "postcss": "^8.5.28",
+    "puppeteer": "^25.11.0",
+    "serve-handler": "^6.1.7",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.0"
   },
   "dependencies": {
     "encoding-japanese": "^2.4.0",
-    "jspreadsheet-ce": "^5.0.4",
+    "jspreadsheet-ce": "^4.15.0",
     "jsuites": "^6.4.3"
   }
 }
