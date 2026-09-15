@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* JSpreadsheetのヘッダーソートボタン用スタイル */
+.jexcel > thead > tr > td[data-x] {
+    position: relative;
+    padding-right: 24px !important;
+}
+.jexcel > thead > tr > td[data-x]::after {
+    content: "\e5db"; /* material-icons arrow_downward */
+    font-family: 'Material Icons';
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #cbd5e1;
+    font-size: 16px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.jexcel > thead > tr > td[data-x]:hover::after {
+    color: #3b82f6;
+}
+
 @import 'jsuites/dist/jsuites.css';
 @import 'jspreadsheet-ce/dist/jspreadsheet.css';
 

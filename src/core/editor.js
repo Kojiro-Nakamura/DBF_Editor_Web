@@ -73,7 +73,7 @@ export function initEditor(container, tableData, originalFields) {
         tableHeight: 'calc(100vh - 64px)', // ヘッダー分を引いた高さ
         rowResize: true,
         columnDrag: true,
-        columnSorting: true,
+        columnSorting: false,
         wordWrap: false,
         sorting: function(direction) {
             const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
@@ -171,6 +171,50 @@ export function initEditor(container, tableData, originalFields) {
         onselection: () => triggerToolbarUpdate(container) // 選択時にも状態チェック
     });
     
+    // カスタムイベントのバインド（ソートとダブルクリック名前変更）
+    if (!container.dataset.eventsBound) {
+        container.dataset.eventsBound = "true";
+        
+        container.addEventListener('mousedown', function(e) {
+            if (e.target.tagName === 'TD' && e.target.closest('thead')) {
+                const x = e.target.getAttribute('data-x');
+                if (x !== null) {
+                    const rect = e.target.getBoundingClientRect();
+                    // 右端24pxの範囲（↓アイコン部分）をクリックした場合
+                    if (e.clientX > rect.right - 24) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const instance = container.jexcel || jspreadsheetInstance;
+                        let order = parseInt(e.target.getAttribute('data-sort-order') || '1');
+                        order = order === 0 ? 1 : 0; // 0=ASC, 1=DESC
+                        e.target.setAttribute('data-sort-order', order);
+                        
+                        instance.orderBy(parseInt(x), order);
+                        triggerToolbarUpdate(container);
+                    }
+                }
+            }
+        }, true);
+
+        container.addEventListener('dblclick', function(e) {
+            if (e.target.tagName === 'TD' && e.target.closest('thead')) {
+                const x = e.target.getAttribute('data-x');
+                if (x !== null) {
+                    const instance = container.jexcel || jspreadsheetInstance;
+                    const currentTitle = instance.getHeader(parseInt(x));
+                    
+                    showPrompt("列名の変更", "新しい列名を入力してください:", currentTitle, (newTitle) => {
+                        if (newTitle !== undefined && newTitle !== null && newTitle.trim() !== '') {
+                            instance.setHeader(parseInt(x), newTitle.trim());
+                            triggerToolbarUpdate(container);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
     // 初期のツールバー状態を更新
     triggerToolbarUpdate(container);
 
