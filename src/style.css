@@ -1,10 +1,14 @@
 @import "tailwindcss";
+@import 'jsuites/dist/jsuites.css';
+@import 'jspreadsheet-ce/dist/jspreadsheet.css';
 
 /* JSpreadsheetのヘッダーソートボタン用スタイル */
 .jexcel > thead > tr > td[data-x] {
     position: relative;
     padding-right: 24px !important;
 }
+
+/* デフォルト状態（未ソート）の矢印アイコン */
 .jexcel > thead > tr > td[data-x]::after {
     content: "\e5db"; /* material-icons arrow_downward */
     font-family: 'Material Icons';
@@ -12,17 +16,34 @@
     right: 4px;
     top: 50%;
     transform: translateY(-50%);
-    color: #cbd5e1;
+    color: #cbd5e1; /* gray-300 */
     font-size: 16px;
     cursor: pointer;
     transition: color 0.2s;
 }
+
+/* ホバー時の色 */
 .jexcel > thead > tr > td[data-x]:hover::after {
     color: #3b82f6;
 }
 
-@import 'jsuites/dist/jsuites.css';
-@import 'jspreadsheet-ce/dist/jspreadsheet.css';
+/* 昇順ソート時のアイコン（青色・上向き） */
+.jexcel > thead > tr > td.arrow-up::after {
+    content: "\e5d8"; /* material-icons arrow_upward */
+    color: #3b82f6;
+}
+
+/* 降順ソート時のアイコン（青色・下向き） */
+.jexcel > thead > tr > td.arrow-down::after {
+    content: "\e5db"; /* material-icons arrow_downward */
+    color: #3b82f6;
+}
+
+/* JSpreadsheetの標準ソート矢印（背景画像）を完全に非表示にする */
+.jexcel > thead > tr > td.arrow-up,
+.jexcel > thead > tr > td.arrow-down {
+    background-image: none !important;
+}
 
 body { 
     font-family: 'Inter', sans-serif; 
