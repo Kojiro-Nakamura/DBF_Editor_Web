@@ -102,7 +102,10 @@ async function processFile(file) {
         // 先に画面を切り替えてから初期化（JSpreadsheetが正しいサイズを計算できるようにするため）
         uploadSection.classList.add('hidden');
         editorSection.classList.remove('hidden');
-        actionButtons.classList.remove('hidden');
+        
+        // 保存・閉じるボタンを表示
+        saveBtn.classList.remove('hidden');
+        closeBtn.classList.remove('hidden');
 
         // エディタを初期化
         initEditor(spreadsheetContainer, tableData, originalFields);
@@ -162,7 +165,8 @@ function closeEditor() {
         currentFileName = '';
 
         editorSection.classList.add('hidden');
-        actionButtons.classList.add('hidden');
+        saveBtn.classList.add('hidden');
+        closeBtn.classList.add('hidden');
         uploadSection.classList.remove('hidden');
     });
 }

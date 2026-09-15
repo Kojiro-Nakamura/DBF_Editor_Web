@@ -12,28 +12,35 @@
 
     <!-- ヘッダー（保存・閉じるボタンをここに配置） -->
     <header class="bg-blue-700 text-white px-6 py-3 shadow-md flex justify-between items-center z-10 shrink-0">
-        <div class="flex items-center space-x-6">
+        <div>
             <h1 class="text-xl font-bold flex items-center">
                 <img src="/favicon.jpg" alt="Logo" class="w-8 h-8 mr-3 rounded-lg shadow-sm" style="width: 32px; height: 32px; object-fit: cover;">
                 DBF Editor
             </h1>
-            <button id="headerOpenBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md shadow text-sm font-bold transition-colors flex items-center border border-blue-500">
-                <span class="material-icons text-sm mr-1">folder_open</span>ファイルを開く
-            </button>
         </div>
-        <div id="actionButtons" class="hidden flex space-x-3 items-center">
-            <div class="bg-blue-800 rounded px-3 py-1 flex items-center text-sm shadow-inner mr-2">
+        <div id="actionButtons" class="flex space-x-3 items-center">
+            <!-- 1. プルダウン -->
+            <div class="bg-blue-800 rounded px-3 py-1 flex items-center text-sm shadow-inner">
                 <span class="material-icons text-sm mr-1">language</span>
                 <select id="encodingSelect" class="bg-transparent text-white outline-none font-bold cursor-pointer">
                     <option value="932">Shift-JIS (日本語)</option>
                     <option value="UTF8">UTF-8</option>
                 </select>
             </div>
-            <button id="closeBtn" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 rounded-md shadow text-sm font-bold transition-colors flex items-center">
-                <span class="material-icons text-sm mr-1">close</span>閉じる
-            </button>
-            <button id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-md shadow text-sm font-bold transition-colors flex items-center">
+            
+            <!-- 2. 保存 -->
+            <button id="saveBtn" class="hidden px-4 py-2 bg-green-500 hover:bg-green-600 rounded-md shadow text-sm font-bold transition-colors flex items-center">
                 <span class="material-icons text-sm mr-1">save</span>保存
+            </button>
+
+            <!-- 3. ファイルを開く -->
+            <button id="headerOpenBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-md shadow text-sm font-bold transition-colors flex items-center border border-blue-500">
+                <span class="material-icons text-sm mr-1">folder_open</span>ファイルを開く
+            </button>
+
+            <!-- 4. 閉じる -->
+            <button id="closeBtn" class="hidden px-4 py-2 bg-gray-500 hover:bg-gray-600 rounded-md shadow text-sm font-bold transition-colors flex items-center">
+                <span class="material-icons text-sm mr-1">close</span>閉じる
             </button>
         </div>
     </header>
