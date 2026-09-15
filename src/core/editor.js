@@ -73,6 +73,19 @@ export function initEditor(container, tableData, originalFields) {
         columnDrag: true,
         columnSorting: true,
         wordWrap: false,
+        sorting: function(direction) {
+            const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+            return function(a, b) {
+                var valA = String(a[1] || '');
+                var valB = String(b[1] || '');
+                
+                if (direction === 0) {
+                    return collator.compare(valA, valB);
+                } else {
+                    return collator.compare(valB, valA);
+                }
+            };
+        },
         toolbar: [
             {
                 type: 'i',
