@@ -1,4 +1,5 @@
-import Encoding from 'encoding-japanese';
+import * as EncodingPkg from 'encoding-japanese';
+const Encoding = EncodingPkg.default || EncodingPkg;
 
 export const DBFHandler = {
     // DBFバイナリからデータを読み取る

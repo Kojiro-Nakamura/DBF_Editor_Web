@@ -1,3 +1,5 @@
+import jSuites from 'jsuites';
+window.jSuites = jSuites;
 import jspreadsheet from 'jspreadsheet-ce';
 import { showPrompt } from '../utils/modal.js';
 

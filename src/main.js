@@ -25,35 +25,33 @@ function hideLoading() { loading.classList.add('hidden'); }
 // ==========================================
 // 初期化
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-    initModal();
+initModal();
 
-    // ツールバーの更新をキー操作やクリックにもバインド
-    document.addEventListener('keyup', () => triggerToolbarUpdate(spreadsheetContainer));
-    document.addEventListener('mouseup', () => triggerToolbarUpdate(spreadsheetContainer));
+// ツールバーの更新をキー操作やクリックにもバインド
+document.addEventListener('keyup', () => triggerToolbarUpdate(spreadsheetContainer));
+document.addEventListener('mouseup', () => triggerToolbarUpdate(spreadsheetContainer));
 
-    // イベントリスナーの登録
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) processFile(e.target.files[0]);
-    });
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('border-blue-500', 'bg-blue-50');
-    });
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-    });
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-        if (e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0]);
-    });
-
-    saveBtn.addEventListener('click', saveDbfFile);
-    closeBtn.addEventListener('click', closeEditor);
+// イベントリスナーの登録
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) processFile(e.target.files[0]);
 });
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('border-blue-500', 'bg-blue-50');
+});
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+});
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    if (e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0]);
+});
+
+saveBtn.addEventListener('click', saveDbfFile);
+closeBtn.addEventListener('click', closeEditor);
 
 // ==========================================
 // ファイル操作・UI制御
