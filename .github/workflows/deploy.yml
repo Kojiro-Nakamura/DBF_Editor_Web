@@ -1,9 +1,9 @@
 name: Deploy static content to Pages
 
 on:
-  # mainブランチにプッシュされたときに実行
+  # masterブランチにプッシュされたときに実行
   push:
-    branches: ['main']
+    branches: ['master']
   # GitHubの画面から手動で実行できるようにする
   workflow_dispatch:
 
