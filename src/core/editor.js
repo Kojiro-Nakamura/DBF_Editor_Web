@@ -32,9 +32,11 @@ export function updateToolbarState(container) {
         // 見た目だけをグレーアウトする
         undoBtn.style.opacity = canUndo ? '1' : '0.3';
         undoBtn.style.cursor = canUndo ? 'pointer' : 'default';
+        undoBtn.style.pointerEvents = canUndo ? 'auto' : 'none';
         
         redoBtn.style.opacity = canRedo ? '1' : '0.3';
         redoBtn.style.cursor = canRedo ? 'pointer' : 'default';
+        redoBtn.style.pointerEvents = canRedo ? 'auto' : 'none';
     }
 }
 
@@ -168,6 +170,9 @@ export function initEditor(container, tableData, originalFields) {
         onmovecolumn: () => triggerToolbarUpdate(container),
         onselection: () => triggerToolbarUpdate(container) // 選択時にも状態チェック
     });
+    
+    // 初期のツールバー状態を更新
+    triggerToolbarUpdate(container);
 
     return jspreadsheetInstance;
 }
