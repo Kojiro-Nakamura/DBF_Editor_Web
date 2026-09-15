@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'jsuites/dist/jsuites.css';
+@import 'jspreadsheet-ce/dist/jspreadsheet.css';
+
+body { 
+    font-family: 'Inter', sans-serif; 
+    overflow: hidden; 
+}
+
+.jexcel_toolbar i { 
+    transition: opacity 0.2s; 
+}
+
+/* モーダルの背景とアニメーション */
+.modal-overlay { 
+    background-color: rgba(0, 0, 0, 0.5); 
+    backdrop-filter: blur(2px); 
+}
+
+/* 右クリックメニューを一番手前に */
+.jexcel_contextmenu { 
+    z-index: 50 !important; 
+}

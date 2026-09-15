@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DBF Editor Web</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.css" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/jsuites/dist/jsuites.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspreadsheet-ce@4/dist/jspreadsheet.min.css" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/jspreadsheet-ce@4/dist/index.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        .jexcel_toolbar i { transition: opacity 0.2s; }
+        /* モーダルの背景とアニメーション */
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
+        .jexcel_contextmenu { z-index: 50 !important; } /* 右クリックメニューを一番手前に */
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col bg-gray-50 text-gray-800">
+
+    <!-- ヘッダー（保存・閉じるボタンをここに配置） -->
+    <header class="bg-blue-700 text-white px-6 py-3 shadow-md flex justify-between items-center z-10 shrink-0">
+        <h1 class="text-xl font-bold flex items-center">
+            <span class="material-icons mr-2">table_chart</span>DBF Editor
+        </h1>
+        <div id="actionButtons" class="hidden flex space-x-3 items-center">
+            <div class="bg-blue-800 rounded px-3 py-1 flex items-center text-sm shadow-inner mr-2">
+                <span class="material-icons text-sm mr-1">language</span>
+                <select id="encodingSelect" class="bg-transparent text-white outline-none font-bold cursor-pointer">
+                    <option value="932">Shift-JIS (日本語)</option>
+                    <option value="UTF8">UTF-8</option>
+                </select>
+            </div>
+            <button id="closeBtn" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 rounded-md shadow text-sm font-bold transition-colors flex items-center">
+                <span class="material-icons text-sm mr-1">close</span>閉じる
+            </button>
+            <button id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-md shadow text-sm font-bold transition-colors flex items-center">
+                <span class="material-icons text-sm mr-1">save</span>保存
+            </button>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="flex-1 relative w-full h-full overflow-hidden">
+        
+        <!-- ファイルアップロード画面 -->
+        <div id="uploadSection" class="absolute inset-0 flex flex-col items-center justify-center p-6 bg-gray-50 z-0">
+            <div id="dropZone" class="w-full max-w-2xl p-12 border-4 border-dashed border-gray-300 rounded-2xl bg-white flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer shadow-sm">
+                <span class="material-icons text-6xl text-gray-400 mb-4">upload_file</span>
+                <h2 class="text-2xl font-bold text-gray-700 mb-2">DBFファイルをドロップして開く</h2>
+                <p class="text-gray-500 mb-6">または、ここをクリックしてファイルを選択してください</p>
+                <div class="flex items-center space-x-2 text-sm text-gray-400 bg-gray-100 px-4 py-2 rounded-full">
+                    <span class="material-icons text-sm">info</span>
+                    <span>ファイルはブラウザ内で処理され、サーバーには送信されません</span>
+                </div>
+                <input type="file" id="fileInput" accept=".dbf" class="hidden">
+            </div>
+        </div>
+
+        <!-- スプレッドシート画面 -->
+        <div id="editorSection" class="hidden absolute inset-0 bg-white z-0 flex flex-col">
+            <div id="spreadsheet" class="w-full flex-1"></div>
+        </div>
+
+    </main>
+
+    <!-- ローディング画面 -->
+    <div id="loading" class="hidden fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
+        <p class="text-lg font-bold text-gray-700">処理中...</p>
+    </div>
+
+    <!-- カスタムモーダル (alert, confirm, promptの代わり) -->
+    <div id="customModal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center opacity-0 transition-opacity duration-200">
+        <div id="modalContent" class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform scale-95 transition-transform duration-200">
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-2">確認</h3>
+            <p id="modalMessage" class="text-gray-600 mb-4 whitespace-pre-wrap"></p>
+            
+            <!-- Prompt用入力欄 -->
+            <input type="text" id="modalInput" class="hidden w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-6" autocomplete="off">
+            
+            <div class="flex justify-end space-x-3 mt-2">
+                <button id="modalCancel" class="px-4 py-2 rounded-md font-medium text-gray-700 hover:bg-gray-100 transition-colors">キャンセル</button>
+                <button id="modalConfirm" class="px-4 py-2 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // UI要素の取得
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const editorSection = document.getElementById('editorSection');
+        const spreadsheetContainer = document.getElementById('spreadsheet');
+        const actionButtons = document.getElementById('actionButtons');
+        const closeBtn = document.getElementById('closeBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const encodingSelect = document.getElementById('encodingSelect');
+        const loading = document.getElementById('loading');
+
+        // モーダル要素の取得
+        const customModal = document.getElementById('customModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalInput = document.getElementById('modalInput');
+        const modalCancel = document.getElementById('modalCancel');
+        const modalConfirm = document.getElementById('modalConfirm');
+
+        let jspreadsheetInstance = null;
+        let currentFileName = '';
+        let originalFields = []; // 読み込んだ際のDBF列定義を保持
+        let modalConfirmCallback = null;
+
+        // ==========================================
+        // カスタムモーダルの制御
+        // ==========================================
+        function showModal(title, message, isAlert, isPrompt, defaultValue, callback) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalConfirmCallback = callback;
+            
+            // プロンプト（入力）モードの切り替え
+            if (isPrompt) {
+                modalInput.value = defaultValue || '';
+                modalInput.classList.remove('hidden');
+                modalMessage.classList.replace('mb-6', 'mb-4');
+            } else {
+                modalInput.classList.add('hidden');
+                modalInput.value = '';
+                modalMessage.classList.replace('mb-4', 'mb-6');
+            }
+
+            // アラートモード（キャンセル非表示、OKのみ）の切り替え
+            if (isAlert) {
+                modalCancel.style.display = 'none';
+                modalConfirm.className = "px-4 py-2 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm";
+            } else {
+                modalCancel.style.display = 'block';
+                modalConfirm.className = isPrompt 
+                    ? "px-4 py-2 rounded-md font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+                    : "px-4 py-2 rounded-md font-medium text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm";
+            }
+
+            customModal.classList.remove('hidden');
+            // アニメーション用
+            requestAnimationFrame(() => {
+                customModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                if (isPrompt) {
+                    modalInput.focus();
+                    modalInput.select(); // 入力しやすいよう全選択
+                }
+            });
+        }
+
+        function hideModal() {
+            customModal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                customModal.classList.add('hidden');
+                modalConfirmCallback = null;
+            }, 200);
+        }
+
+        // モーダルのイベントリスナー
+        modalCancel.addEventListener('click', hideModal);
+        modalConfirm.addEventListener('click', () => {
+            if (modalConfirmCallback) {
+                if (!modalInput.classList.contains('hidden')) {
+                    modalConfirmCallback(modalInput.value);
+                } else {
+                    modalConfirmCallback();
+                }
+            }
+            hideModal();
+        });
+
+        // エンターキーで確定 (IME変換中のEnterは無視する)
+        modalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                if (e.isComposing || e.keyCode === 229) return; // 変換中は発火させない
+                e.preventDefault();
+                modalConfirm.click();
+            }
+        });
+
+        // ESCキーでキャンセル (モーダル表示中のみ)
+        document.addEventListener('keydown', (e) => {
+            if (!customModal.classList.contains('hidden') && e.key === 'Escape') {
+                hideModal();
+            }
+        });
+
+        // 呼び出し用ヘルパー関数
+        function showAlert(message) { showModal("お知らせ", message, true, false, null, null); }
+        function showConfirm(message, callback) { showModal("確認", message, false, false, null, callback); }
+        function showPrompt(title, message, defaultValue, callback) { showModal(title, message, false, true, defaultValue, callback); }
+        
+        function showLoading() { loading.classList.remove('hidden'); }
+        function hideLoading() { loading.classList.add('hidden'); }
+
+        // ==========================================
+        // ツールバー (Undo/Redo) の状態更新
+        // ==========================================
+        function updateToolbarState() {
+            if (!jspreadsheetInstance) return;
+            const toolbar = spreadsheetContainer.querySelector('.jexcel_toolbar') || spreadsheetContainer.querySelector('.jspreadsheet_toolbar');
+            if (!toolbar) return;
+            
+            const items = toolbar.querySelectorAll('i');
+            let undoBtn, redoBtn;
+            items.forEach(icon => {
+                if (icon.textContent.trim() === 'undo') undoBtn = icon.parentElement;
+                if (icon.textContent.trim() === 'redo') redoBtn = icon.parentElement;
+            });
+            
+            if (undoBtn && redoBtn) {
+                // インスタンスから確実な履歴状態を取得
+                const instance = spreadsheetContainer.jexcel || jspreadsheetInstance;
+                const history = instance.history || [];
+                const historyIndex = instance.historyIndex !== undefined ? instance.historyIndex : -1;
+                
+                const canUndo = history.length > 0 && historyIndex >= 0;
+                const canRedo = history.length > 0 && historyIndex < history.length - 1;
+
+                // 見た目だけをグレーアウトする（pointerEventsはライブラリのバグ回避のため削除）
+                undoBtn.style.opacity = canUndo ? '1' : '0.3';
+                undoBtn.style.cursor = canUndo ? 'pointer' : 'default';
+                
+                redoBtn.style.opacity = canRedo ? '1' : '0.3';
+                redoBtn.style.cursor = canRedo ? 'pointer' : 'default';
+            }
+        }
+        
+        const triggerToolbarUpdate = () => setTimeout(updateToolbarState, 50);
+
+        // キー操作やマウスクリック（セル移動等）でも強制的に状態をチェックさせる
+        document.addEventListener('keyup', triggerToolbarUpdate);
+        document.addEventListener('mouseup', triggerToolbarUpdate);
+
+        // ==========================================
+        // DBFパーサー & ライター (Encoding.js使用)
+        // ==========================================
+        const DBFHandler = {
+            // DBFバイナリからデータを読み取る
+            parse: function(arrayBuffer, encoding) {
+                const view = new DataView(arrayBuffer);
+                const byteLength = arrayBuffer.byteLength;
+                
+                // ファイルサイズが小さすぎる場合のチェック
+                if (byteLength < 32) {
+                    throw new Error("ファイルサイズが小さすぎます。不正なDBFファイルです。");
+                }
+
+                const numRecords = view.getUint32(4, true);
+                const headerBytes = view.getUint16(8, true);
+                
+                // ヘッダーサイズがファイルサイズを超える場合のチェック
+                if (headerBytes > byteLength) {
+                    throw new Error("ヘッダーサイズが不正です。ファイルが破損している可能性があります。");
+                }
+                
+                let offset = 32;
+                const fields = [];
+                // フィールド（列）定義の読み込み
+                while (offset < headerBytes - 1) {
+                    if (offset + 32 > byteLength) break; // 安全対策: バッファオーバーラン防止
+
+                    const fieldNameBytes = new Uint8Array(arrayBuffer, offset, 11);
+                    let nameLen = 0;
+                    while (nameLen < 11 && fieldNameBytes[nameLen] !== 0) nameLen++;
+                    const fieldName = new TextDecoder('ascii').decode(fieldNameBytes.subarray(0, nameLen));
+
+                    fields.push({
+                        name: fieldName,
+                        type: String.fromCharCode(view.getUint8(offset + 11)),
+                        length: view.getUint8(offset + 16),
+                        decimal: view.getUint8(offset + 17)
+                    });
+                    offset += 32;
+                }
+
+                // 実データの読み込み
+                const data = [];
+                offset = headerBytes;
+                const fromEncoding = encoding === '932' ? 'SJIS' : 'UTF8';
+
+                for (let i = 0; i < numRecords; i++) {
+                    if (offset >= byteLength) break; // 安全対策: ファイル終端に達したらループを抜ける
+
+                    const record = [];
+                    const isDeleted = view.getUint8(offset);
+                    offset += 1; // 削除フラグ分進める
+                    
+                    let isRecordValid = true;
+                    for (const field of fields) {
+                        // データが途切れている場合は無効としてループを抜ける
+                        if (offset + field.length > byteLength) {
+                            isRecordValid = false;
+                            break; 
+                        }
+                        const valueBytes = new Uint8Array(arrayBuffer, offset, field.length);
+                        // Encoding.js で正しい文字コードに変換して文字列化
+                        const valueStr = Encoding.codeToString(Encoding.convert(valueBytes, {to: 'UNICODE', from: fromEncoding})).trim();
+                        record.push(valueStr);
+                        offset += field.length;
+                    }
+                    
+                    if (!isRecordValid) break; // レコードが途切れていた場合は読み込みを終了
+
+                    if (isDeleted !== 0x2A) { // '*' (0x2A) は削除済みレコード
+                        data.push(record);
+                    }
+                }
+                return { fields, data };
+            },
+
+            // 編集後のデータから保存用DBFバイナリを作成する
+            write: function(data, currentHeaders, encoding) {
+                const numRecords = data.length;
+                
+                // 現在の列名に基づいて新しいフィールド定義を作成する（列追加に対応するため）
+                const toEncoding = encoding === '932' ? 'SJIS' : 'UTF8';
+                const fields = currentHeaders.map((header, colIndex) => {
+                    const existing = originalFields.find(f => f.name === header);
+                    if (existing) return existing;
+
+                    // 新規追加された列の場合は、データから長さと型を推測する
+                    let maxLength = 10;
+                    let isNumeric = true;
+                    data.forEach(row => {
+                        const val = String(row[colIndex] || '');
+                        let byteLen = val.length;
+                        if(toEncoding === 'SJIS') {
+                            byteLen = Encoding.convert(Encoding.stringToCode(val), {to: 'SJIS', from: 'UNICODE'}).length;
+                        } else {
+                            byteLen = new TextEncoder().encode(val).length;
+                        }
+                        if (byteLen > maxLength) maxLength = byteLen;
+                        if (val !== '' && isNaN(Number(val))) isNumeric = false;
+                    });
+                    return {
+                        name: header.substring(0, 10), // DBFの列名は最大10文字
+                        type: isNumeric ? 'N' : 'C',
+                        length: Math.min(255, maxLength + 2), // 余白を持たせる
+                        decimal: 0
+                    };
+                });
+
+                const headerBytes = 32 + (fields.length * 32) + 1;
+                let recordBytes = 1;
+                fields.forEach(f => recordBytes += f.length);
+
+                const buffer = new ArrayBuffer(headerBytes + (numRecords * recordBytes) + 1);
+                const view = new DataView(buffer);
+                const uint8Array = new Uint8Array(buffer);
+
+                // 1. DBFファイルヘッダーの作成
+                view.setUint8(0, 0x03); // dBase III
+                const now = new Date();
+                view.setUint8(1, now.getFullYear() - 1900);
+                view.setUint8(2, now.getMonth() + 1);
+                view.setUint8(3, now.getDate());
+                view.setUint32(4, numRecords, true);
+                view.setUint16(8, headerBytes, true);
+                view.setUint16(10, recordBytes, true);
+                view.setUint8(29, encoding === '932' ? 0x13 : 0x00); // 29バイト目 言語ID (0x13 = Shift-JIS)
+
+                // 2. フィールド（列）定義の書き込み
+                let offset = 32;
+                fields.forEach(field => {
+                    const nameBytes = new TextEncoder().encode(field.name);
+                    uint8Array.set(nameBytes, offset);
+                    view.setUint8(offset + 11, field.type.charCodeAt(0));
+                    view.setUint8(offset + 16, field.length);
+                    view.setUint8(offset + 17, field.decimal);
+                    offset += 32;
+                });
+                view.setUint8(offset, 0x0D); // ヘッダー終端
+
+                // 3. レコード（実データ）の書き込み
+                offset = headerBytes;
+                data.forEach(row => {
+                    view.setUint8(offset, 0x20); // 有効レコードフラグ (Space)
+                    offset += 1;
+                    
+                    fields.forEach((field, i) => {
+                        let val = row[i] !== undefined && row[i] !== null ? String(row[i]) : '';
+                        let encodedArray;
+                        
+                        if (toEncoding === 'SJIS') {
+                            encodedArray = new Uint8Array(Encoding.convert(Encoding.stringToCode(val), {to: 'SJIS', from: 'UNICODE'}));
+                        } else {
+                            encodedArray = new TextEncoder().encode(val);
+                        }
+
+                        // フィールド長に合わせてパディング（空白埋め）
+                        const finalArray = new Uint8Array(field.length);
+                        finalArray.fill(0x20);
+                        
+                        // 数値型の場合は右寄せ、それ以外は左寄せ
+                        if (field.type === 'N' || field.type === 'F') {
+                            const start = Math.max(0, field.length - encodedArray.length);
+                            finalArray.set(encodedArray.slice(0, field.length), start);
+                        } else {
+                            finalArray.set(encodedArray.slice(0, field.length), 0);
+                        }
+                        
+                        uint8Array.set(finalArray, offset);
+                        offset += field.length;
+                    });
+                });
+                view.setUint8(offset, 0x1A); // ファイル終端 (EOF)
+
+                return new Blob([buffer], { type: 'application/x-dbf' });
+            }
+        };
+
+        // ==========================================
+        // ファイル操作・UI制御
+        // ==========================================
+        
+        function processFile(file) {
+            if (!file.name.toLowerCase().endsWith('.dbf')) {
+                showAlert("DBFファイルを選択してください。");
+                return;
+            }
+            currentFileName = file.name;
+            showLoading();
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const encoding = encodingSelect.value;
+                    const parsed = DBFHandler.parse(e.target.result, encoding);
+                    
+                    originalFields = parsed.fields;
+                    let tableData = parsed.data;
+
+                    // データが空の場合の安全対策（1行分だけ空枠を作る）
+                    if (tableData.length === 0) {
+                        tableData = [Array(originalFields.length).fill("")];
+                    }
+
+                    // 列の表示設定を生成
+                    const columnsConfig = originalFields.map(field => ({
+                        title: field.name,
+                        width: Math.max(100, field.name.length * 15)
+                    }));
+
+                    // 既存のエディタがあれば破棄
+                    if (jspreadsheetInstance) {
+                        jspreadsheetInstance.destroy();
+                        spreadsheetContainer.innerHTML = '';
+                    }
+
+                    // JSpreadsheetの初期化
+                    jspreadsheetInstance = jspreadsheet(spreadsheetContainer, {
+                        data: tableData,
+                        columns: columnsConfig,
+                        defaultColWidth: 150,
+                        tableOverflow: true,
+                        tableWidth: '100%',
+                        tableHeight: 'calc(100vh - 64px)', // ヘッダー分を引いた高さ
+                        rowResize: true,
+                        columnDrag: true,
+                        wordWrap: false,
+                        toolbar: [
+                            {
+                                type: 'i',
+                                content: 'undo',
+                                onclick: function() { 
+                                    const instance = spreadsheetContainer.jexcel || jspreadsheetInstance;
+                                    // 履歴がある時のみ元に戻す（グレーアウト中のクリック対策）
+                                    if (instance.history && instance.historyIndex >= 0) {
+                                        instance.undo(); 
+                                    }
+                                    triggerToolbarUpdate(); 
+                                }
+                            },
+                            {
+                                type: 'i',
+                                content: 'redo',
+                                onclick: function() { 
+                                    const instance = spreadsheetContainer.jexcel || jspreadsheetInstance;
+                                    // やり直せる履歴がある時のみやり直す
+                                    if (instance.history && instance.historyIndex < instance.history.length - 1) {
+                                        instance.redo(); 
+                                    }
+                                    triggerToolbarUpdate(); 
+                                }
+                            }
+                        ],
+                        // カスタム右クリックメニュー
+                        contextMenu: function(obj, x, y, e) {
+                            const items = [];
+                            // 未選択状態で右クリックされた場合のエラー対策
+                            if (obj.selectedCell === null) {
+                                obj.updateSelectionFromCoords(x || 0, y || 0);
+                            }
+
+                            if (y === null) {
+                                // 列ヘッダーを右クリック
+                                items.push({
+                                    title: '列名を変更する',
+                                    onclick: function() {
+                                        const currentTitle = obj.getHeader(x);
+                                        showPrompt("列名の変更", "新しい列名を入力してください:", currentTitle, (newTitle) => {
+                                            if (newTitle !== undefined && newTitle !== null && newTitle.trim() !== '') {
+                                                obj.setHeader(x, newTitle.trim());
+                                                triggerToolbarUpdate();
+                                            }
+                                        });
+                                    }
+                                });
+                                items.push({ title: '左に列を挿入', onclick: function() { obj.insertColumn(1, parseInt(x), 1); } });
+                                items.push({ title: '選択した列を削除', onclick: function() { obj.deleteColumn(parseInt(x)); } });
+                            } else if (x === null) {
+                                // 行番号を右クリック
+                                items.push({ title: '上に行を挿入', onclick: function() { obj.insertRow(1, parseInt(y), 1); } });
+                                items.push({ title: '選択した行を削除', onclick: function() { obj.deleteRow(parseInt(y), 1); } });
+                            } else {
+                                // 通常のセルを右クリック
+                                items.push({ title: 'コピー', onclick: function() { obj.copy(); } });
+                                items.push({ title: '貼り付け', onclick: function() { navigator.clipboard.readText().then(text => obj.paste(x, y, text)); } });
+                            }
+                            return items;
+                        },
+                        // データ変更時にツールバー状態を更新
+                        onchange: triggerToolbarUpdate,
+                        onundo: triggerToolbarUpdate,
+                        onredo: triggerToolbarUpdate,
+                        oninsertrow: triggerToolbarUpdate,
+                        ondeleterow: triggerToolbarUpdate,
+                        oninsertcolumn: triggerToolbarUpdate,
+                        ondeletecolumn: triggerToolbarUpdate,
+                        onmoverow: triggerToolbarUpdate,
+                        onmovecolumn: triggerToolbarUpdate,
+                        onselection: triggerToolbarUpdate // 選択時にも状態チェック
+                    });
+
+                    // 画面の切り替え
+                    uploadSection.classList.add('hidden');
+                    editorSection.classList.remove('hidden');
+                    actionButtons.classList.remove('hidden');
+                    
+                    // 初期表示時のボタン状態反映
+                    triggerToolbarUpdate();
+
+                } catch (err) {
+                    console.error(err);
+                    showAlert("ファイルの読み込み中にエラーが発生しました。\n" + err.message);
+                } finally {
+                    hideLoading();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 保存処理
+        function saveDbfFile() {
+            if (!jspreadsheetInstance) return;
+            showLoading();
+
+            try {
+                // 現在のデータを取得
+                const data = jspreadsheetInstance.getData();
+                // 現在のヘッダー名を取得
+                const headers = jspreadsheetInstance.getHeaders().split(',');
+                
+                // DBFバイナリを生成
+                const encoding = encodingSelect.value;
+                const blob = DBFHandler.write(data, headers, encoding);
+
+                // ダウンロード処理
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentFileName || 'export.dbf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showAlert("保存が完了しました。");
+            } catch (err) {
+                console.error(err);
+                showAlert("保存中にエラーが発生しました。\n" + err.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 閉じる処理
+        function closeEditor() {
+            showConfirm("編集中のデータは破棄されます。\nエディタを閉じますか？", () => {
+                if (jspreadsheetInstance) {
+                    jspreadsheetInstance.destroy();
+                    jspreadsheetInstance = null;
+                }
+                spreadsheetContainer.innerHTML = '';
+                fileInput.value = '';
+                originalFields = [];
+                currentFileName = '';
+
+                editorSection.classList.add('hidden');
+                actionButtons.classList.add('hidden');
+                uploadSection.classList.remove('hidden');
+            });
+        }
+
+        // イベントリスナーの登録
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) processFile(e.target.files[0]);
+        });
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500', 'bg-blue-50');
+        });
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            if (e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0]);
+        });
+
+        saveBtn.addEventListener('click', saveDbfFile);
+        closeBtn.addEventListener('click', closeEditor);
+
+    </script>
+</body>
+</html>
