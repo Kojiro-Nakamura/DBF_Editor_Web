@@ -58,8 +58,10 @@ export function initEditor(container, tableData, originalFields) {
         width: Math.max(100, field.name.length * 15)
     }));
 
+    const jspreadsheetInit = typeof jspreadsheet === 'function' ? jspreadsheet : jspreadsheet.default;
+
     // JSpreadsheetの初期化
-    jspreadsheetInstance = jspreadsheet(container, {
+    jspreadsheetInstance = jspreadsheetInit(container, {
         data: tableData,
         columns: columnsConfig,
         defaultColWidth: 150,

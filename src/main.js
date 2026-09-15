@@ -87,13 +87,13 @@ async function processFile(file) {
             tableData = [Array(originalFields.length).fill("")];
         }
 
-        // エディタを初期化
-        initEditor(spreadsheetContainer, tableData, originalFields);
-
-        // 画面の切り替え
+        // 先に画面を切り替えてから初期化（JSpreadsheetが正しいサイズを計算できるようにするため）
         uploadSection.classList.add('hidden');
         editorSection.classList.remove('hidden');
         actionButtons.classList.remove('hidden');
+
+        // エディタを初期化
+        initEditor(spreadsheetContainer, tableData, originalFields);
         
         // 初期表示時のボタン状態反映
         triggerToolbarUpdate(spreadsheetContainer);
