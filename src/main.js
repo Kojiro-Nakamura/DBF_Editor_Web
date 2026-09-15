@@ -7,6 +7,7 @@ import { initEditor, destroyEditor, getEditorInstance, triggerToolbarUpdate } fr
 // ==========================================
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
+const headerOpenBtn = document.getElementById('headerOpenBtn');
 const uploadSection = document.getElementById('uploadSection');
 const editorSection = document.getElementById('editorSection');
 const spreadsheetContainer = document.getElementById('spreadsheet');
@@ -32,6 +33,17 @@ document.addEventListener('keyup', () => triggerToolbarUpdate(spreadsheetContain
 document.addEventListener('mouseup', () => triggerToolbarUpdate(spreadsheetContainer));
 
 // イベントリスナーの登録
+headerOpenBtn.addEventListener('click', () => {
+    if (!editorSection.classList.contains('hidden')) {
+        showConfirm("編集中のデータは破棄されます。\n新しいファイルを開きますか？", () => {
+            fileInput.value = '';
+            fileInput.click();
+        });
+    } else {
+        fileInput.value = '';
+        fileInput.click();
+    }
+});
 dropZone.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) processFile(e.target.files[0]);
