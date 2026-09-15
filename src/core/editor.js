@@ -186,11 +186,7 @@ export function initEditor(container, tableData, originalFields) {
                         e.stopPropagation();
                         
                         const instance = container.jexcel || jspreadsheetInstance;
-                        let order = parseInt(e.target.getAttribute('data-sort-order') || '1');
-                        order = order === 0 ? 1 : 0; // 0=ASC, 1=DESC
-                        e.target.setAttribute('data-sort-order', order);
-                        
-                        instance.orderBy(parseInt(x), order);
+                        instance.orderBy(parseInt(x));
                         triggerToolbarUpdate(container);
                     }
                 }
@@ -217,6 +213,65 @@ export function initEditor(container, tableData, originalFields) {
 
     // 初期のツールバー状態を更新
     triggerToolbarUpdate(container);
+
+    // ==========================================
+    // JSpreadsheet CE v4 のソートUndo/Redoバグ修正パッチ
+    // ==========================================
+    const originalSetHistory = jspreadsheetInstance.setHistory;
+    jspreadsheetInstance.setHistory = function(changes) {
+        if (changes && changes.action === 'orderBy') {
+            // 変更前のソート状態を記録する
+            let prevCol = null;
+            let prevDir = null;
+            for (let i = 0; i < this.headers.length; i++) {
+                if (this.headers[i].classList.contains('arrow-down')) {
+                    prevCol = i; prevDir = 0; break;
+                } else if (this.headers[i].classList.contains('arrow-up')) {
+                    prevCol = i; prevDir = 1; break;
+                }
+            }
+            changes.previousSortColumn = prevCol;
+            changes.previousSortDirection = prevDir;
+        }
+        originalSetHistory.call(this, changes);
+    };
+
+    const originalUndo = jspreadsheetInstance.undo;
+    jspreadsheetInstance.undo = function() {
+        const hIndex = this.historyIndex;
+        if (hIndex >= 0) {
+            const action = this.history[hIndex];
+            originalUndo.call(this);
+            
+            if (action && action.action === 'orderBy') {
+                // JSpreadsheetの誤った矢印復元を上書きして、正しい以前の状態に戻す
+                for (let i = 0; i < this.headers.length; i++) {
+                    this.headers[i].classList.remove('arrow-up', 'arrow-down');
+                }
+                if (action.previousSortColumn !== null) {
+                    const cls = action.previousSortDirection === 0 ? 'arrow-down' : 'arrow-up';
+                    this.headers[action.previousSortColumn].classList.add(cls);
+                }
+            }
+        }
+    };
+
+    const originalRedo = jspreadsheetInstance.redo;
+    jspreadsheetInstance.redo = function() {
+        const hIndex = this.historyIndex;
+        if (hIndex < this.history.length - 1) {
+            const action = this.history[hIndex + 1];
+            originalRedo.call(this);
+            
+            if (action && action.action === 'orderBy') {
+                for (let i = 0; i < this.headers.length; i++) {
+                    this.headers[i].classList.remove('arrow-up', 'arrow-down');
+                }
+                const cls = action.order === 0 ? 'arrow-down' : 'arrow-up';
+                this.headers[action.column].classList.add(cls);
+            }
+        }
+    };
 
     return jspreadsheetInstance;
 }
