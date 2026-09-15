@@ -55,6 +55,7 @@ export function initEditor(container, tableData, originalFields) {
     // 列の表示設定を生成
     const columnsConfig = originalFields.map(field => ({
         title: field.name,
+        type: 'text',
         width: Math.max(100, field.name.length * 15)
     }));
 
@@ -70,6 +71,7 @@ export function initEditor(container, tableData, originalFields) {
         tableHeight: 'calc(100vh - 64px)', // ヘッダー分を引いた高さ
         rowResize: true,
         columnDrag: true,
+        columnSorting: true,
         wordWrap: false,
         toolbar: [
             {
@@ -107,6 +109,15 @@ export function initEditor(container, tableData, originalFields) {
 
             if (y === null) {
                 // 列ヘッダーを右クリック
+                items.push({
+                    title: '昇順で並べ替え (A→Z)',
+                    onclick: function() { obj.orderBy(parseInt(x), 0); triggerToolbarUpdate(container); }
+                });
+                items.push({
+                    title: '降順で並べ替え (Z→A)',
+                    onclick: function() { obj.orderBy(parseInt(x), 1); triggerToolbarUpdate(container); }
+                });
+                items.push({ type: 'line' });
                 items.push({
                     title: '列名を変更する',
                     onclick: function() {
