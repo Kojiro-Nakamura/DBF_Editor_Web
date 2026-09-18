@@ -45,26 +45,16 @@ export function triggerToolbarUpdate(container) {
 }
 
 // ==========================================
-// エディタの初期化
+// JSpreadsheet 設定オブジェクトの生成
 // ==========================================
-export function initEditor(container, tableData, originalFields) {
-    // 既存のエディタがあれば破棄
-    if (jspreadsheetInstance) {
-        jspreadsheetInstance.destroy();
-        container.innerHTML = '';
-    }
-
-    // 列の表示設定を生成
+function buildSpreadsheetConfig(container, tableData, originalFields) {
     const columnsConfig = originalFields.map(field => ({
         title: field.name,
         type: 'text',
         width: Math.max(100, field.name.length * 15)
     }));
 
-    const jspreadsheetInit = typeof jspreadsheet === 'function' ? jspreadsheet : jspreadsheet.default;
-
-    // JSpreadsheetの初期化
-    jspreadsheetInstance = jspreadsheetInit(container, {
+    return {
         data: tableData,
         columns: columnsConfig,
         defaultColWidth: 150,
@@ -73,19 +63,16 @@ export function initEditor(container, tableData, originalFields) {
         tableHeight: 'calc(100vh - 64px)', // ヘッダー分を引いた高さ
         rowResize: true,
         columnDrag: true,
-        columnSorting: false,
+        columnSorting: false, // JSpreadsheet標準のソートを無効化（独自実装するため）
         wordWrap: false,
         sorting: function(direction) {
             const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
             return function(a, b) {
-                var valA = String(a[1] || '');
-                var valB = String(b[1] || '');
-                
-                if (direction === 0) {
-                    return collator.compare(valA, valB);
-                } else {
-                    return collator.compare(valB, valA);
-                }
+                const valA = String(a[1] || '');
+                const valB = String(b[1] || '');
+                return direction === 0 
+                    ? collator.compare(valA, valB) 
+                    : collator.compare(valB, valA);
             };
         },
         toolbar: [
@@ -94,7 +81,6 @@ export function initEditor(container, tableData, originalFields) {
                 content: 'undo',
                 onclick: function() { 
                     const instance = container.jexcel || jspreadsheetInstance;
-                    // 履歴がある時のみ元に戻す
                     if (instance.history && instance.historyIndex >= 0) {
                         instance.undo(); 
                     }
@@ -106,7 +92,6 @@ export function initEditor(container, tableData, originalFields) {
                 content: 'redo',
                 onclick: function() { 
                     const instance = container.jexcel || jspreadsheetInstance;
-                    // やり直せる履歴がある時のみやり直す
                     if (instance.history && instance.historyIndex < instance.history.length - 1) {
                         instance.redo(); 
                     }
@@ -114,16 +99,13 @@ export function initEditor(container, tableData, originalFields) {
                 }
             }
         ],
-        // カスタム右クリックメニュー
         contextMenu: function(obj, x, y, e) {
             const items = [];
-            // 未選択状態で右クリックされた場合のエラー対策
             if (obj.selectedCell === null) {
                 obj.updateSelectionFromCoords(x || 0, y || 0);
             }
 
             if (y === null) {
-                // 列ヘッダーを右クリック
                 items.push({
                     title: '昇順で並べ替え (A→Z)',
                     onclick: function() { obj.orderBy(parseInt(x), 0); triggerToolbarUpdate(container); }
@@ -148,17 +130,14 @@ export function initEditor(container, tableData, originalFields) {
                 items.push({ title: '左に列を挿入', onclick: function() { obj.insertColumn(1, parseInt(x), 1); } });
                 items.push({ title: '選択した列を削除', onclick: function() { obj.deleteColumn(parseInt(x)); } });
             } else if (x === null) {
-                // 行番号を右クリック
                 items.push({ title: '上に行を挿入', onclick: function() { obj.insertRow(1, parseInt(y), 1); } });
                 items.push({ title: '選択した行を削除', onclick: function() { obj.deleteRow(parseInt(y), 1); } });
             } else {
-                // 通常のセルを右クリック
                 items.push({ title: 'コピー', onclick: function() { obj.copy(); } });
                 items.push({ title: '貼り付け', onclick: function() { navigator.clipboard.readText().then(text => obj.paste(x, y, text)); } });
             }
             return items;
         },
-        // データ変更時にツールバー状態を更新
         onchange: () => triggerToolbarUpdate(container),
         onundo: () => triggerToolbarUpdate(container),
         onredo: () => triggerToolbarUpdate(container),
@@ -168,57 +147,59 @@ export function initEditor(container, tableData, originalFields) {
         ondeletecolumn: () => triggerToolbarUpdate(container),
         onmoverow: () => triggerToolbarUpdate(container),
         onmovecolumn: () => triggerToolbarUpdate(container),
-        onselection: () => triggerToolbarUpdate(container) // 選択時にも状態チェック
-    });
+        onselection: () => triggerToolbarUpdate(container)
+    };
+}
+
+// ==========================================
+// カスタムイベントのバインド
+// ==========================================
+function setupEditorEvents(container) {
+    if (container.dataset.eventsBound) return;
+    container.dataset.eventsBound = "true";
     
-    // カスタムイベントのバインド（ソートとダブルクリック名前変更）
-    if (!container.dataset.eventsBound) {
-        container.dataset.eventsBound = "true";
-        
-        container.addEventListener('mousedown', function(e) {
-            if (e.target.tagName === 'TD' && e.target.closest('thead')) {
-                const x = e.target.getAttribute('data-x');
-                if (x !== null) {
-                    const rect = e.target.getBoundingClientRect();
-                    // 右端24pxの範囲（↓アイコン部分）をクリックした場合
-                    if (e.clientX > rect.right - 24) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        const instance = container.jexcel || jspreadsheetInstance;
-                        instance.orderBy(parseInt(x));
+    container.addEventListener('mousedown', function(e) {
+        if (e.target.tagName === 'TD' && e.target.closest('thead')) {
+            const x = e.target.getAttribute('data-x');
+            if (x !== null) {
+                const rect = e.target.getBoundingClientRect();
+                // 右端24pxの範囲（↓アイコン部分）をクリックした場合ソートを実行
+                if (e.clientX > rect.right - 24) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const instance = container.jexcel || jspreadsheetInstance;
+                    instance.orderBy(parseInt(x));
+                    triggerToolbarUpdate(container);
+                }
+            }
+        }
+    }, true);
+
+    container.addEventListener('dblclick', function(e) {
+        if (e.target.tagName === 'TD' && e.target.closest('thead')) {
+            const x = e.target.getAttribute('data-x');
+            if (x !== null) {
+                const instance = container.jexcel || jspreadsheetInstance;
+                const currentTitle = instance.getHeader(parseInt(x));
+                
+                showPrompt("列名の変更", "新しい列名を入力してください:", currentTitle, (newTitle) => {
+                    if (newTitle !== undefined && newTitle !== null && newTitle.trim() !== '') {
+                        instance.setHeader(parseInt(x), newTitle.trim());
                         triggerToolbarUpdate(container);
                     }
-                }
+                });
             }
-        }, true);
+        }
+    });
+}
 
-        container.addEventListener('dblclick', function(e) {
-            if (e.target.tagName === 'TD' && e.target.closest('thead')) {
-                const x = e.target.getAttribute('data-x');
-                if (x !== null) {
-                    const instance = container.jexcel || jspreadsheetInstance;
-                    const currentTitle = instance.getHeader(parseInt(x));
-                    
-                    showPrompt("列名の変更", "新しい列名を入力してください:", currentTitle, (newTitle) => {
-                        if (newTitle !== undefined && newTitle !== null && newTitle.trim() !== '') {
-                            instance.setHeader(parseInt(x), newTitle.trim());
-                            triggerToolbarUpdate(container);
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    // 初期のツールバー状態を更新
-    triggerToolbarUpdate(container);
-
-    // ==========================================
-    // JSpreadsheet CE v4 のソートUndo/Redoバグ修正パッチ
-    // ==========================================
-    const originalSetHistory = jspreadsheetInstance.setHistory;
-    jspreadsheetInstance.setHistory = function(changes) {
+// ==========================================
+// JSpreadsheet CE v4 のソートUndo/Redoバグ修正パッチ
+// ==========================================
+function applyJSpreadsheetPatches(instance) {
+    const originalSetHistory = instance.setHistory;
+    instance.setHistory = function(changes) {
         if (changes && changes.action === 'orderBy') {
             // 変更前のソート状態を記録する
             let prevCol = null;
@@ -236,8 +217,8 @@ export function initEditor(container, tableData, originalFields) {
         originalSetHistory.call(this, changes);
     };
 
-    const originalUndo = jspreadsheetInstance.undo;
-    jspreadsheetInstance.undo = function() {
+    const originalUndo = instance.undo;
+    instance.undo = function() {
         const hIndex = this.historyIndex;
         if (hIndex >= 0) {
             const action = this.history[hIndex];
@@ -248,7 +229,7 @@ export function initEditor(container, tableData, originalFields) {
                 for (let i = 0; i < this.headers.length; i++) {
                     this.headers[i].classList.remove('arrow-up', 'arrow-down');
                 }
-                if (action.previousSortColumn !== null) {
+                if (action.previousSortColumn !== null && action.previousSortColumn !== undefined) {
                     const cls = action.previousSortDirection === 0 ? 'arrow-down' : 'arrow-up';
                     this.headers[action.previousSortColumn].classList.add(cls);
                 }
@@ -256,8 +237,8 @@ export function initEditor(container, tableData, originalFields) {
         }
     };
 
-    const originalRedo = jspreadsheetInstance.redo;
-    jspreadsheetInstance.redo = function() {
+    const originalRedo = instance.redo;
+    instance.redo = function() {
         const hIndex = this.historyIndex;
         if (hIndex < this.history.length - 1) {
             const action = this.history[hIndex + 1];
@@ -272,6 +253,25 @@ export function initEditor(container, tableData, originalFields) {
             }
         }
     };
+}
+
+// ==========================================
+// エディタの初期化と破棄
+// ==========================================
+export function initEditor(container, tableData, originalFields) {
+    if (jspreadsheetInstance) {
+        jspreadsheetInstance.destroy();
+        container.innerHTML = '';
+    }
+
+    const config = buildSpreadsheetConfig(container, tableData, originalFields);
+    const jspreadsheetInit = typeof jspreadsheet === 'function' ? jspreadsheet : jspreadsheet.default;
+
+    jspreadsheetInstance = jspreadsheetInit(container, config);
+    
+    setupEditorEvents(container);
+    applyJSpreadsheetPatches(jspreadsheetInstance);
+    triggerToolbarUpdate(container);
 
     return jspreadsheetInstance;
 }
