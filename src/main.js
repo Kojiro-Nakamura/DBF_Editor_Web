@@ -1,4 +1,4 @@
-import { initModal, showAlert, showConfirm } from './utils/modal.js';
+import { initModal, showAlert, showConfirm, showEncodingPrompt } from './utils/modal.js';
 import { DBFHandler } from './core/dbf-handler.js';
 import { initEditor, destroyEditor, getEditorInstance, triggerToolbarUpdate } from './core/editor.js';
 
@@ -32,7 +32,9 @@ initModal();
 document.addEventListener('keyup', () => triggerToolbarUpdate(spreadsheetContainer));
 document.addEventListener('mouseup', () => triggerToolbarUpdate(spreadsheetContainer));
 
+// ==========================================
 // イベントリスナーの登録
+// ==========================================
 headerOpenBtn.addEventListener('click', () => {
     if (!editorSection.classList.contains('hidden')) {
         showConfirm("編集中のデータは破棄されます。\n新しいファイルを開きますか？", () => {
@@ -46,21 +48,51 @@ headerOpenBtn.addEventListener('click', () => {
 });
 dropZone.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) processFile(e.target.files[0]);
+    if (e.target.files.length > 0) handleFileSelection(e.target.files[0]);
 });
-dropZone.addEventListener('dragover', (e) => {
+
+// ファイルが既に開かれている状態でもドロップで開けるように、body全体にイベントを張る
+document.body.addEventListener('dragover', (e) => {
     e.preventDefault();
-    dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    if (!uploadSection.classList.contains('hidden')) {
+        dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    }
 });
-dropZone.addEventListener('dragleave', (e) => {
+document.body.addEventListener('dragleave', (e) => {
     e.preventDefault();
-    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    if (!uploadSection.classList.contains('hidden')) {
+        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    }
 });
-dropZone.addEventListener('drop', (e) => {
+document.body.addEventListener('drop', (e) => {
     e.preventDefault();
-    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-    if (e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0]);
+    if (!uploadSection.classList.contains('hidden')) {
+        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    }
+    
+    if (e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (!editorSection.classList.contains('hidden')) {
+            showConfirm("編集中のデータは破棄されます。\n新しいファイルを開きますか？", () => {
+                handleFileSelection(file);
+            });
+        } else {
+            handleFileSelection(file);
+        }
+    }
 });
+
+function handleFileSelection(file) {
+    if (!file.name.toLowerCase().endsWith('.dbf')) {
+        showAlert("DBFファイルを選択してください。");
+        return;
+    }
+    showEncodingPrompt((selectedEncoding) => {
+        // UIのセレクトボックスも合わせて変更しておく
+        encodingSelect.value = selectedEncoding;
+        processFile(file, selectedEncoding);
+    });
+}
 
 saveBtn.addEventListener('click', saveDbfFile);
 closeBtn.addEventListener('click', closeEditor);
@@ -77,18 +109,12 @@ async function readFileAsArrayBuffer(file) {
     });
 }
 
-async function processFile(file) {
-    if (!file.name.toLowerCase().endsWith('.dbf')) {
-        showAlert("DBFファイルを選択してください。");
-        return;
-    }
-    
+async function processFile(file, encoding) {
     currentFileName = file.name;
     showLoading();
 
     try {
         const arrayBuffer = await readFileAsArrayBuffer(file);
-        const encoding = encodingSelect.value;
         const parsed = DBFHandler.parse(arrayBuffer, encoding);
         
         originalFields = parsed.fields;

@@ -92,3 +92,37 @@ export function hideModal() {
 export function showAlert(message) { showModal("お知らせ", message, true, false, null, null); }
 export function showConfirm(message, callback) { showModal("確認", message, false, false, null, callback); }
 export function showPrompt(title, message, defaultValue, callback) { showModal(title, message, false, true, defaultValue, callback); }
+
+// エンコーディング選択モーダル
+let encodingModalCallback = null;
+export function showEncodingPrompt(callback) {
+    const encModal = document.getElementById('encodingModal');
+    const encContent = document.getElementById('encodingModalContent');
+    const btnSjis = document.getElementById('btnEncodingSjis');
+    const btnUtf8 = document.getElementById('btnEncodingUtf8');
+    const btnCancel = document.getElementById('encodingModalCancel');
+
+    encodingModalCallback = callback;
+
+    const hide = () => {
+        encModal.classList.add('opacity-0');
+        encContent.classList.add('scale-95');
+        setTimeout(() => encModal.classList.add('hidden'), 200);
+    };
+
+    const handleSjis = () => { hide(); if(encodingModalCallback) encodingModalCallback('932'); encodingModalCallback = null; };
+    const handleUtf8 = () => { hide(); if(encodingModalCallback) encodingModalCallback('UTF8'); encodingModalCallback = null; };
+    const handleCancel = () => { hide(); encodingModalCallback = null; };
+
+    // Remove old listeners by cloning (quick way) or just add once. Actually adding once in initModal is better, but since this is called on demand, we can just replace elements.
+    // To prevent multiple listener accumulation, we can just assign to onclick.
+    btnSjis.onclick = handleSjis;
+    btnUtf8.onclick = handleUtf8;
+    btnCancel.onclick = handleCancel;
+
+    encModal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        encModal.classList.remove('opacity-0');
+        encContent.classList.remove('scale-95');
+    });
+}
