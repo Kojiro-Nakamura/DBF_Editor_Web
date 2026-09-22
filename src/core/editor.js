@@ -106,6 +106,17 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
             }
 
             if (y === null) {
+                let startCol = parseInt(x);
+                let numOfCols = 1;
+                if (obj.selectedCell) {
+                    const minX = Math.min(parseInt(obj.selectedCell[0]), parseInt(obj.selectedCell[2]));
+                    const maxX = Math.max(parseInt(obj.selectedCell[0]), parseInt(obj.selectedCell[2]));
+                    if (startCol >= minX && startCol <= maxX) {
+                        startCol = minX;
+                        numOfCols = maxX - minX + 1;
+                    }
+                }
+                
                 items.push({
                     title: '昇順で並べ替え (A→Z)',
                     onclick: function() { obj.orderBy(parseInt(x), 0); triggerToolbarUpdate(container); }
@@ -128,10 +139,29 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
                     }
                 });
                 items.push({ title: '左に列を挿入', onclick: function() { obj.insertColumn(1, parseInt(x), 1); } });
-                items.push({ title: '選択した列を削除', onclick: function() { obj.deleteColumn(parseInt(x)); } });
+                items.push({ title: '右に列を挿入', onclick: function() { obj.insertColumn(1, parseInt(x), 0); } });
+                items.push({ 
+                    title: numOfCols > 1 ? `選択した ${numOfCols}列 を削除` : '選択した列を削除', 
+                    onclick: function() { obj.deleteColumn(startCol, numOfCols); } 
+                });
             } else if (x === null) {
+                let startRow = parseInt(y);
+                let numOfRows = 1;
+                if (obj.selectedCell) {
+                    const minY = Math.min(parseInt(obj.selectedCell[1]), parseInt(obj.selectedCell[3]));
+                    const maxY = Math.max(parseInt(obj.selectedCell[1]), parseInt(obj.selectedCell[3]));
+                    if (startRow >= minY && startRow <= maxY) {
+                        startRow = minY;
+                        numOfRows = maxY - minY + 1;
+                    }
+                }
+
                 items.push({ title: '上に行を挿入', onclick: function() { obj.insertRow(1, parseInt(y), 1); } });
-                items.push({ title: '選択した行を削除', onclick: function() { obj.deleteRow(parseInt(y), 1); } });
+                items.push({ title: '下に行を挿入', onclick: function() { obj.insertRow(1, parseInt(y), 0); } });
+                items.push({ 
+                    title: numOfRows > 1 ? `選択した ${numOfRows}行 を削除` : '選択した行を削除', 
+                    onclick: function() { obj.deleteRow(startRow, numOfRows); } 
+                });
             } else {
                 items.push({ title: 'コピー', onclick: function() { obj.copy(); } });
                 items.push({ title: '貼り付け', onclick: function() { navigator.clipboard.readText().then(text => obj.paste(x, y, text)); } });
