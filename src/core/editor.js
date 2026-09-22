@@ -88,6 +88,7 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
         columnDrag: true,
         columnSorting: false, // JSpreadsheet標準のソートを無効化（独自実装するため）
         wordWrap: false,
+        parseFormulas: false,
         sorting: function(direction) {
             const collator = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
             return function(a, b) {
