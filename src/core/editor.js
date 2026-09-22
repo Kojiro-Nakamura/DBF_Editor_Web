@@ -369,24 +369,44 @@ function setupEditorEvents(container) {
                     e.preventDefault();
                     e.stopPropagation();
                     
+                    const targetX = parseInt(x);
+                    let colsToFit = [targetX];
+
+                    // 複数列や全選択が行われているかチェック
+                    const selection = instance.selectedCell;
+                    if (selection) {
+                        const selMinX = Math.min(parseInt(selection[0]), parseInt(selection[2]));
+                        const selMaxX = Math.max(parseInt(selection[0]), parseInt(selection[2]));
+                        
+                        // クリックした列が選択範囲内なら、選択範囲すべての列をフィットさせる
+                        if (targetX >= selMinX && targetX <= selMaxX) {
+                            colsToFit = [];
+                            for (let c = selMinX; c <= selMaxX; c++) {
+                                colsToFit.push(c);
+                            }
+                        }
+                    }
+
                     const data = instance.options.data;
                     const canvas = document.createElement("canvas");
                     const context = canvas.getContext("2d");
                     context.font = "14px 'Noto Sans JP', sans-serif";
                     
-                    const title = instance.getHeader(parseInt(x));
-                    let maxWidth = context.measureText(title).width + 40; // アイコン等の余白分
-                    
-                    for (let r = 0; r < data.length; r++) {
-                        const val = String(data[r][parseInt(x)] || '');
-                        const width = context.measureText(val).width + 20; // 余白分
-                        if (width > maxWidth) {
-                            maxWidth = width;
+                    for (const c of colsToFit) {
+                        const title = instance.getHeader(c);
+                        let maxWidth = context.measureText(title).width + 40; // アイコン等の余白分
+                        
+                        for (let r = 0; r < data.length; r++) {
+                            const val = String(data[r][c] || '');
+                            const width = context.measureText(val).width + 20; // 余白分
+                            if (width > maxWidth) {
+                                maxWidth = width;
+                            }
                         }
+                        
+                        // 幅を50〜500pxの間にクランプして設定
+                        instance.setWidth(c, Math.min(Math.max(maxWidth, 50), 500));
                     }
-                    
-                    // 幅を50〜500pxの間にクランプして設定
-                    instance.setWidth(parseInt(x), Math.min(Math.max(maxWidth, 50), 500));
                     triggerToolbarUpdate(container);
                     return;
                 }
