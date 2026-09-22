@@ -95,7 +95,9 @@ export function showPrompt(title, message, defaultValue, callback) { showModal(t
 
 // エンコーディング選択モーダル
 let encodingModalCallback = null;
-export function showEncodingPrompt(callback) {
+let encodingKeyDownHandler = null;
+
+export function showEncodingPrompt(defaultEncoding, callback) {
     const encModal = document.getElementById('encodingModal');
     const encContent = document.getElementById('encodingModalContent');
     const btnSjis = document.getElementById('btnEncodingSjis');
@@ -103,10 +105,32 @@ export function showEncodingPrompt(callback) {
     const btnCancel = document.getElementById('encodingModalCancel');
 
     encodingModalCallback = callback;
+    let currentSelected = defaultEncoding === '932' ? '932' : 'UTF8';
+
+    const updateVisuals = () => {
+        const activeClass = "w-full px-4 py-3 rounded-md font-bold text-blue-800 bg-blue-100 border-2 border-blue-500 shadow-md relative flex justify-center items-center transition-all";
+        const inactiveClass = "w-full px-4 py-3 rounded-md font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-300 transition-all shadow-sm flex justify-center items-center";
+        
+        if (currentSelected === '932') {
+            btnSjis.className = activeClass;
+            btnSjis.innerHTML = `Shift-JIS (日本語) <span class="material-icons text-blue-500 absolute right-4">check_circle</span>`;
+            btnUtf8.className = inactiveClass;
+            btnUtf8.innerHTML = `UTF-8`;
+        } else {
+            btnUtf8.className = activeClass;
+            btnUtf8.innerHTML = `UTF-8 <span class="material-icons text-blue-500 absolute right-4">check_circle</span>`;
+            btnSjis.className = inactiveClass;
+            btnSjis.innerHTML = `Shift-JIS (日本語)`;
+        }
+    };
 
     const hide = () => {
         encModal.classList.add('opacity-0');
         encContent.classList.add('scale-95');
+        if (encodingKeyDownHandler) {
+            document.removeEventListener('keydown', encodingKeyDownHandler);
+            encodingKeyDownHandler = null;
+        }
         setTimeout(() => encModal.classList.add('hidden'), 200);
     };
 
@@ -114,12 +138,27 @@ export function showEncodingPrompt(callback) {
     const handleUtf8 = () => { hide(); if(encodingModalCallback) encodingModalCallback('UTF8'); encodingModalCallback = null; };
     const handleCancel = () => { hide(); encodingModalCallback = null; };
 
-    // Remove old listeners by cloning (quick way) or just add once. Actually adding once in initModal is better, but since this is called on demand, we can just replace elements.
-    // To prevent multiple listener accumulation, we can just assign to onclick.
-    btnSjis.onclick = handleSjis;
-    btnUtf8.onclick = handleUtf8;
+    btnSjis.onclick = () => { currentSelected = '932'; updateVisuals(); handleSjis(); };
+    btnUtf8.onclick = () => { currentSelected = 'UTF8'; updateVisuals(); handleUtf8(); };
     btnCancel.onclick = handleCancel;
 
+    encodingKeyDownHandler = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentSelected === '932') handleSjis();
+            else handleUtf8();
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            currentSelected = currentSelected === '932' ? 'UTF8' : '932';
+            updateVisuals();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            handleCancel();
+        }
+    };
+    document.addEventListener('keydown', encodingKeyDownHandler);
+
+    updateVisuals();
     encModal.classList.remove('hidden');
     requestAnimationFrame(() => {
         encModal.classList.remove('opacity-0');

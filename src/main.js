@@ -87,7 +87,8 @@ function handleFileSelection(file) {
         showAlert("DBFファイルを選択してください。");
         return;
     }
-    showEncodingPrompt((selectedEncoding) => {
+    const currentEncoding = encodingSelect.value || '932';
+    showEncodingPrompt(currentEncoding, (selectedEncoding) => {
         // UIのセレクトボックスも合わせて変更しておく
         encodingSelect.value = selectedEncoding;
         processFile(file, selectedEncoding);
