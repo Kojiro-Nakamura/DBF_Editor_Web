@@ -342,9 +342,9 @@ function setupEditorEvents(container) {
             if (x !== null) {
                 const rect = e.target.getBoundingClientRect();
                 const fromRight = rect.right - e.clientX;
-                // 右端6px以内はJSpreadsheetの列リサイズ判定に譲るため除外
-                // 6px〜24pxの範囲（↓アイコン部分）をクリックした場合のみソートを実行
-                if (fromRight >= 6 && fromRight <= 24) {
+                // 右端15px以内はJSpreadsheetの列リサイズ判定に譲るため除外
+                // 15px〜36pxの範囲（↓アイコン部分）をクリックした場合のみソートを実行
+                if (fromRight >= 15 && fromRight <= 36) {
                     e.preventDefault();
                     e.stopPropagation();
                     
@@ -364,8 +364,8 @@ function setupEditorEvents(container) {
                 const fromRight = rect.right - e.clientX;
                 const instance = container.jexcel || jspreadsheetInstance;
 
-                // 右端のリサイズ境界付近をダブルクリックした場合は列幅の自動調整(Auto-fit)
-                if (fromRight >= 0 && fromRight <= 12) {
+                // 右端のリサイズ境界付近(15px以内)をダブルクリックした場合は列幅の自動調整(Auto-fit)
+                if (fromRight >= 0 && fromRight <= 15) {
                     e.preventDefault();
                     e.stopPropagation();
                     

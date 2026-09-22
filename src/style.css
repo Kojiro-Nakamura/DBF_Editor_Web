@@ -5,7 +5,7 @@
 /* JSpreadsheetのヘッダーソートボタン用スタイル */
 .jexcel > thead > tr > td[data-x] {
     position: relative;
-    padding-right: 24px !important;
+    padding-right: 36px !important;
 }
 
 /* デフォルト状態（未ソート）の矢印アイコン */
@@ -13,7 +13,7 @@
     content: "\e5db"; /* material-icons arrow_downward */
     font-family: 'Material Icons';
     position: absolute;
-    right: 4px;
+    right: 16px;
     top: 50%;
     transform: translateY(-50%);
     color: #cbd5e1; /* gray-300 */
