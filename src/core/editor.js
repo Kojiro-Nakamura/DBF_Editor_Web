@@ -382,10 +382,16 @@ export function initEditor(container, tableData, originalFields) {
                 e.preventDefault();
                 applyValue();
                 formulaBarInput.blur();
-                // 必要に応じてJSpreadsheet側にフォーカスを戻す
-                if (document.activeElement !== formulaBarInput) {
-                    const el = jspreadsheetInstance.getCell(`${jspreadsheet.helpers.getColumnName(currentCellX)}${currentCellY + 1}`);
-                    if (el) el.focus();
+                // 下のセルに移動する
+                if (jspreadsheetInstance && currentCellX !== null && currentCellY !== null) {
+                    const nextY = currentCellY + 1;
+                    // 行数チェック
+                    const maxRows = jspreadsheetInstance.options.data.length;
+                    if (nextY < maxRows) {
+                        jspreadsheetInstance.updateSelectionFromCoords(currentCellX, nextY, currentCellX, nextY);
+                    } else {
+                        jspreadsheetInstance.updateSelectionFromCoords(currentCellX, currentCellY, currentCellX, currentCellY);
+                    }
                 }
             }
         };
