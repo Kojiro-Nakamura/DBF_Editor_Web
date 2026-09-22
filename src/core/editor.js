@@ -199,14 +199,38 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
                 }
             }
         },
-        onundo: () => triggerToolbarUpdate(container),
-        onredo: () => triggerToolbarUpdate(container),
-        oninsertrow: () => triggerToolbarUpdate(container),
-        ondeleterow: () => triggerToolbarUpdate(container),
-        oninsertcolumn: () => triggerToolbarUpdate(container),
-        ondeletecolumn: () => triggerToolbarUpdate(container),
-        onmoverow: () => triggerToolbarUpdate(container),
-        onmovecolumn: () => triggerToolbarUpdate(container),
+        onundo: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
+        onredo: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
+        oninsertrow: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
+        ondeleterow: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
+        oninsertcolumn: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
+        ondeletecolumn: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
+        onmoverow: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
+        onmovecolumn: (el) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+        },
         onselection: (el, x1, y1, x2, y2) => {
             triggerToolbarUpdate(container);
             updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, x1, y1);
