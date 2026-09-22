@@ -15,7 +15,7 @@
         <div class="mr-8">
             <h1 class="text-xl font-bold flex items-center">
                 <img src="/favicon.jpg" alt="Logo" class="w-8 h-8 mr-3 rounded-lg shadow-sm" style="width: 32px; height: 32px; object-fit: cover;">
-                DBF Editor <span class="text-xs font-normal ml-2 text-blue-200">v1.0.6</span>
+                DBF Editor <span class="text-xs font-normal ml-2 text-blue-200">v1.0.7</span>
             </h1>
         </div>
         <div id="actionButtons" class="flex space-x-3 items-center">
@@ -64,6 +64,18 @@
 
         <!-- スプレッドシート画面 -->
         <div id="editorSection" class="hidden absolute inset-0 bg-white z-0 flex flex-col">
+            
+            <!-- 入力バー (Formula Bar) -->
+            <div class="flex items-center bg-gray-50 border-b border-gray-300 px-3 py-1.5 shrink-0 shadow-sm z-10">
+                <div class="flex items-center justify-center w-12 h-7 bg-white border border-gray-300 rounded mr-3 text-gray-600 font-bold font-mono text-sm shadow-inner" id="selectedCellLabel">
+                    -
+                </div>
+                <div class="text-gray-400 mr-2 flex items-center" title="関数の挿入">
+                    <span class="material-icons" style="font-size: 20px;">functions</span>
+                </div>
+                <input type="text" id="formulaBar" class="flex-1 bg-white border border-gray-300 rounded px-3 py-1 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm shadow-inner" placeholder="セルを選択してください" disabled>
+            </div>
+
             <div id="spreadsheet" class="w-full flex-1"></div>
         </div>
 

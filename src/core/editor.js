@@ -4,6 +4,11 @@ import jspreadsheet from 'jspreadsheet-ce';
 import { showPrompt } from '../utils/modal.js';
 
 let jspreadsheetInstance = null;
+let formulaBarInput = null;
+let selectedCellLabel = null;
+let currentCellX = null;
+let currentCellY = null;
+let isFormulaBarUpdating = false;
 
 // ==========================================
 // ツールバー (Undo/Redo) の状態更新
@@ -44,6 +49,24 @@ export function triggerToolbarUpdate(container) {
     setTimeout(() => updateToolbarState(container), 50);
 }
 
+function updateFormulaBarFromCell(instance, x, y) {
+    if (!formulaBarInput || !selectedCellLabel) return;
+    currentCellX = parseInt(x);
+    currentCellY = parseInt(y);
+    
+    if (jspreadsheet.helpers && jspreadsheet.helpers.getColumnName) {
+        selectedCellLabel.innerText = jspreadsheet.helpers.getColumnName(currentCellX) + (currentCellY + 1);
+    } else {
+        selectedCellLabel.innerText = '-';
+    }
+
+    if (!isFormulaBarUpdating && document.activeElement !== formulaBarInput) {
+        const val = instance.getValueFromCoords(currentCellX, currentCellY);
+        formulaBarInput.value = val !== null && val !== undefined ? val : '';
+        formulaBarInput.disabled = false;
+    }
+}
+
 // ==========================================
 // JSpreadsheet 設定オブジェクトの生成
 // ==========================================
@@ -60,7 +83,7 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
         defaultColWidth: 150,
         tableOverflow: true,
         tableWidth: '100%',
-        tableHeight: 'calc(100vh - 64px)', // ヘッダー分を引いた高さ
+        tableHeight: 'calc(100vh - 100px)', // ヘッダーと数式バー分を引いた高さ
         rowResize: true,
         columnDrag: true,
         columnSorting: false, // JSpreadsheet標準のソートを無効化（独自実装するため）
@@ -168,7 +191,14 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
             }
             return items;
         },
-        onchange: () => triggerToolbarUpdate(container),
+        onchange: (instance, cell, x, y, value) => {
+            triggerToolbarUpdate(container);
+            if (currentCellX == x && currentCellY == y) {
+                if (formulaBarInput && !isFormulaBarUpdating && document.activeElement !== formulaBarInput) {
+                    formulaBarInput.value = value !== null && value !== undefined ? value : '';
+                }
+            }
+        },
         onundo: () => triggerToolbarUpdate(container),
         onredo: () => triggerToolbarUpdate(container),
         oninsertrow: () => triggerToolbarUpdate(container),
@@ -177,7 +207,10 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
         ondeletecolumn: () => triggerToolbarUpdate(container),
         onmoverow: () => triggerToolbarUpdate(container),
         onmovecolumn: () => triggerToolbarUpdate(container),
-        onselection: () => triggerToolbarUpdate(container)
+        onselection: (instance, x1, y1, x2, y2) => {
+            triggerToolbarUpdate(container);
+            updateFormulaBarFromCell(instance, x1, y1);
+        }
     };
 }
 
@@ -294,11 +327,49 @@ export function initEditor(container, tableData, originalFields) {
         container.innerHTML = '';
     }
 
+    formulaBarInput = document.getElementById('formulaBar');
+    selectedCellLabel = document.getElementById('selectedCellLabel');
+    currentCellX = null;
+    currentCellY = null;
+
     const config = buildSpreadsheetConfig(container, tableData, originalFields);
     const jspreadsheetInit = typeof jspreadsheet === 'function' ? jspreadsheet : jspreadsheet.default;
 
     jspreadsheetInstance = jspreadsheetInit(container, config);
     
+    if (formulaBarInput) {
+        // セルの値が未選択状態のときは無効化
+        formulaBarInput.disabled = true;
+        formulaBarInput.value = '';
+        if (selectedCellLabel) selectedCellLabel.innerText = '-';
+
+        const applyValue = () => {
+            if (jspreadsheetInstance && currentCellX !== null && currentCellY !== null) {
+                isFormulaBarUpdating = true;
+                jspreadsheetInstance.setValueFromCoords(currentCellX, currentCellY, formulaBarInput.value);
+                isFormulaBarUpdating = false;
+            }
+        };
+
+        // エンターキーで確定
+        formulaBarInput.onkeydown = (e) => {
+            e.stopPropagation(); // スプレッドシート側のキーイベント発火を防ぐ
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyValue();
+                formulaBarInput.blur();
+                // 必要に応じてJSpreadsheet側にフォーカスを戻す
+                if (document.activeElement !== formulaBarInput) {
+                    const el = jspreadsheetInstance.getCell(`${jspreadsheet.helpers.getColumnName(currentCellX)}${currentCellY + 1}`);
+                    if (el) el.focus();
+                }
+            }
+        };
+
+        // フォーカスが外れたときにも反映
+        formulaBarInput.onchange = applyValue;
+    }
+
     setupEditorEvents(container);
     applyJSpreadsheetPatches(jspreadsheetInstance);
     triggerToolbarUpdate(container);
@@ -312,6 +383,11 @@ export function destroyEditor(container) {
         jspreadsheetInstance = null;
     }
     container.innerHTML = '';
+    if (formulaBarInput) {
+        formulaBarInput.disabled = true;
+        formulaBarInput.value = '';
+        if (selectedCellLabel) selectedCellLabel.innerText = '-';
+    }
 }
 
 export function getEditorInstance() {
