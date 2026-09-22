@@ -362,42 +362,71 @@ export function initEditor(container, tableData, originalFields) {
     jspreadsheetInstance = jspreadsheetInit(container, config);
     
     if (formulaBarInput) {
-        // セルの値が未選択状態のときは無効化
         formulaBarInput.disabled = true;
         formulaBarInput.value = '';
         if (selectedCellLabel) selectedCellLabel.innerText = '-';
 
-        const applyValue = () => {
-            if (jspreadsheetInstance && currentCellX !== null && currentCellY !== null) {
-                isFormulaBarUpdating = true;
-                jspreadsheetInstance.setValueFromCoords(currentCellX, currentCellY, formulaBarInput.value);
-                isFormulaBarUpdating = false;
-            }
+        let editingCellX = null;
+        let editingCellY = null;
+        let moveDownOnBlur = false;
+
+        formulaBarInput.onfocus = () => {
+            editingCellX = currentCellX;
+            editingCellY = currentCellY;
         };
 
-        // エンターキーで確定
-        formulaBarInput.onkeydown = (e) => {
-            e.stopPropagation(); // スプレッドシート側のキーイベント発火を防ぐ
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                applyValue();
-                formulaBarInput.blur();
-                // 下のセルに移動する
-                if (jspreadsheetInstance && currentCellX !== null && currentCellY !== null) {
-                    const nextY = currentCellY + 1;
-                    // 行数チェック
-                    const maxRows = jspreadsheetInstance.options.data.length;
-                    if (nextY < maxRows) {
-                        jspreadsheetInstance.updateSelectionFromCoords(currentCellX, nextY, currentCellX, nextY);
-                    } else {
-                        jspreadsheetInstance.updateSelectionFromCoords(currentCellX, currentCellY, currentCellX, currentCellY);
-                    }
+        const applyValue = () => {
+            const x = editingCellX !== null ? editingCellX : currentCellX;
+            const y = editingCellY !== null ? editingCellY : currentCellY;
+            if (jspreadsheetInstance && x !== null && y !== null) {
+                const currentVal = jspreadsheetInstance.getValueFromCoords(x, y);
+                if (currentVal != formulaBarInput.value) {
+                    isFormulaBarUpdating = true;
+                    jspreadsheetInstance.setValueFromCoords(x, y, formulaBarInput.value);
+                    isFormulaBarUpdating = false;
                 }
             }
         };
 
-        // フォーカスが外れたときにも反映
-        formulaBarInput.onchange = applyValue;
+        formulaBarInput.onkeydown = (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                moveDownOnBlur = true;
+                formulaBarInput.blur();
+            }
+        };
+
+        formulaBarInput.onblur = () => {
+            applyValue();
+            
+            const prevX = editingCellX !== null ? editingCellX : currentCellX;
+            const prevY = editingCellY !== null ? editingCellY : currentCellY;
+            
+            editingCellX = null;
+            editingCellY = null;
+
+            // 他のセルをクリックしてフォーカスが外れた場合、表示を新しいセルに同期させる
+            if (jspreadsheetInstance && currentCellX !== null && currentCellY !== null) {
+                const val = jspreadsheetInstance.getValueFromCoords(currentCellX, currentCellY);
+                formulaBarInput.value = val !== null && val !== undefined ? val : '';
+            }
+
+            if (moveDownOnBlur) {
+                moveDownOnBlur = false;
+                if (jspreadsheetInstance && prevX !== null && prevY !== null) {
+                    const nextY = prevY + 1;
+                    const maxRows = jspreadsheetInstance.options.data.length;
+                    if (nextY < maxRows) {
+                        jspreadsheetInstance.updateSelectionFromCoords(prevX, nextY, prevX, nextY);
+                    } else {
+                        jspreadsheetInstance.updateSelectionFromCoords(prevX, prevY, prevX, prevY);
+                    }
+                }
+            }
+        };
+        
+        formulaBarInput.onchange = null;
     }
 
     setupEditorEvents(container);
