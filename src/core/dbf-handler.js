@@ -20,6 +20,7 @@ export const DBFHandler = {
             throw new Error("ヘッダーサイズが不正です。ファイルが破損している可能性があります。");
         }
         
+        const fromEncoding = encoding === '932' ? 'SJIS' : 'UTF8';
         let offset = 32;
         const fields = [];
         // フィールド（列）定義の読み込み
@@ -29,7 +30,8 @@ export const DBFHandler = {
             const fieldNameBytes = new Uint8Array(arrayBuffer, offset, 11);
             let nameLen = 0;
             while (nameLen < 11 && fieldNameBytes[nameLen] !== 0) nameLen++;
-            const fieldName = new TextDecoder('ascii').decode(fieldNameBytes.subarray(0, nameLen));
+            
+            const fieldName = Encoding.codeToString(Encoding.convert(fieldNameBytes.subarray(0, nameLen), {to: 'UNICODE', from: fromEncoding}));
 
             fields.push({
                 name: fieldName,
@@ -43,7 +45,6 @@ export const DBFHandler = {
         // 実データの読み込み
         const data = [];
         offset = headerBytes;
-        const fromEncoding = encoding === '932' ? 'SJIS' : 'UTF8';
 
         for (let i = 0; i < numRecords; i++) {
             if (offset >= byteLength) break; // 安全対策: ファイル終端に達したらループを抜ける
@@ -129,7 +130,25 @@ export const DBFHandler = {
         // 2. フィールド（列）定義の書き込み
         let offset = 32;
         fields.forEach(field => {
-            const nameBytes = new TextEncoder().encode(field.name);
+            let nameBytes;
+            if (toEncoding === 'SJIS') {
+                // 文字列を1文字ずつ減らしながら11バイトに収まるようにする
+                let nameStr = field.name;
+                let sjisArray = Encoding.convert(Encoding.stringToCode(nameStr), {to: 'SJIS', from: 'UNICODE'});
+                while (sjisArray.length > 11 && nameStr.length > 0) {
+                    nameStr = nameStr.slice(0, -1);
+                    sjisArray = Encoding.convert(Encoding.stringToCode(nameStr), {to: 'SJIS', from: 'UNICODE'});
+                }
+                nameBytes = new Uint8Array(sjisArray);
+            } else {
+                let nameStr = field.name;
+                let utf8Array = new TextEncoder().encode(nameStr);
+                while (utf8Array.length > 11 && nameStr.length > 0) {
+                    nameStr = nameStr.slice(0, -1);
+                    utf8Array = new TextEncoder().encode(nameStr);
+                }
+                nameBytes = utf8Array;
+            }
             uint8Array.set(nameBytes, offset);
             view.setUint8(offset + 11, field.type.charCodeAt(0));
             view.setUint8(offset + 16, field.length);
