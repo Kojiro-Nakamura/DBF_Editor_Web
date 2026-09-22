@@ -187,7 +187,17 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
                 });
             } else {
                 items.push({ title: 'コピー', onclick: function() { obj.copy(true); } });
-                items.push({ title: '貼り付け', onclick: function() { navigator.clipboard.readText().then(text => obj.paste(x, y, text)); } });
+                items.push({ title: '貼り付け', onclick: function() { 
+                    navigator.clipboard.readText().then(text => {
+                        let pasteX = x;
+                        let pasteY = y;
+                        if (obj.selectedCell) {
+                            pasteX = Math.min(parseInt(obj.selectedCell[0]), parseInt(obj.selectedCell[2]));
+                            pasteY = Math.min(parseInt(obj.selectedCell[1]), parseInt(obj.selectedCell[3]));
+                        }
+                        obj.paste(pasteX, pasteY, text);
+                    });
+                } });
             }
             return items;
         },
