@@ -191,7 +191,7 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
             }
             return items;
         },
-        onchange: (instance, cell, x, y, value) => {
+        onchange: (el, cell, x, y, value) => {
             triggerToolbarUpdate(container);
             if (currentCellX == x && currentCellY == y) {
                 if (formulaBarInput && !isFormulaBarUpdating && document.activeElement !== formulaBarInput) {
@@ -207,9 +207,9 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
         ondeletecolumn: () => triggerToolbarUpdate(container),
         onmoverow: () => triggerToolbarUpdate(container),
         onmovecolumn: () => triggerToolbarUpdate(container),
-        onselection: (instance, x1, y1, x2, y2) => {
+        onselection: (el, x1, y1, x2, y2) => {
             triggerToolbarUpdate(container);
-            updateFormulaBarFromCell(instance, x1, y1);
+            updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, x1, y1);
         }
     };
 }
