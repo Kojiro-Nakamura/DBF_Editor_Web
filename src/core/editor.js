@@ -186,7 +186,7 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
                     onclick: function() { obj.deleteRow(startRow, numOfRows); } 
                 });
             } else {
-                items.push({ title: 'コピー', onclick: function() { obj.copy(); } });
+                items.push({ title: 'コピー', onclick: function() { obj.copy(true); } });
                 items.push({ title: '貼り付け', onclick: function() { navigator.clipboard.readText().then(text => obj.paste(x, y, text)); } });
             }
             return items;
