@@ -67,6 +67,66 @@ function updateFormulaBarFromCell(instance, x, y) {
     }
 }
 
+function updateStatusBar(instance) {
+    const avgEl = document.getElementById('statusAverage');
+    const countEl = document.getElementById('statusCount');
+    const sumEl = document.getElementById('statusSum');
+    const avgValEl = document.getElementById('statusAverageVal');
+    const countValEl = document.getElementById('statusCountVal');
+    const sumValEl = document.getElementById('statusSumVal');
+
+    if (!avgEl || !countEl || !sumEl) return;
+
+    let sum = 0;
+    let countNum = 0;
+    let countTotal = 0;
+
+    const selection = instance.selectedCell;
+    if (selection) {
+        const minX = Math.min(parseInt(selection[0]), parseInt(selection[2]));
+        const maxX = Math.max(parseInt(selection[0]), parseInt(selection[2]));
+        const minY = Math.min(parseInt(selection[1]), parseInt(selection[3]));
+        const maxY = Math.max(parseInt(selection[1]), parseInt(selection[3]));
+
+        for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+                const val = instance.getValueFromCoords(x, y);
+                // null, undefined, 空文字 以外をカウント
+                if (val !== null && val !== undefined && String(val).trim() !== '') {
+                    countTotal++;
+                    const num = Number(val);
+                    if (!isNaN(num)) {
+                        sum += num;
+                        countNum++;
+                    }
+                }
+            }
+        }
+    }
+
+    if (countTotal > 1) { // 複数セル選択時のみ表示
+        countEl.classList.remove('hidden');
+        countValEl.innerText = countTotal;
+
+        if (countNum > 0) {
+            sumEl.classList.remove('hidden');
+            // 小数第4位くらいまで表示
+            sumValEl.innerText = sum.toLocaleString(undefined, { maximumFractionDigits: 4 });
+            
+            avgEl.classList.remove('hidden');
+            const avg = sum / countNum;
+            avgValEl.innerText = avg.toLocaleString(undefined, { maximumFractionDigits: 4 });
+        } else {
+            sumEl.classList.add('hidden');
+            avgEl.classList.add('hidden');
+        }
+    } else {
+        avgEl.classList.add('hidden');
+        countEl.classList.add('hidden');
+        sumEl.classList.add('hidden');
+    }
+}
+
 // ==========================================
 // JSpreadsheet 設定オブジェクトの生成
 // ==========================================
@@ -209,42 +269,61 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
                     formulaBarInput.value = value !== null && value !== undefined ? value : '';
                 }
             }
+            updateStatusBar(el.jexcel || jspreadsheetInstance);
         },
         onundo: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         onredo: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         oninsertrow: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         ondeleterow: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         oninsertcolumn: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         ondeletecolumn: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         onmoverow: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         onmovecolumn: (el) => {
             triggerToolbarUpdate(container);
-            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, currentCellX, currentCellY);
+            const instance = el.jexcel || jspreadsheetInstance;
+            if (currentCellX !== null && currentCellY !== null) updateFormulaBarFromCell(instance, currentCellX, currentCellY);
+            updateStatusBar(instance);
         },
         onselection: (el, x1, y1, x2, y2) => {
             triggerToolbarUpdate(container);
-            updateFormulaBarFromCell(el.jexcel || jspreadsheetInstance, x1, y1);
+            const instance = el.jexcel || jspreadsheetInstance;
+            updateFormulaBarFromCell(instance, x1, y1);
+            updateStatusBar(instance);
         }
     };
 }
