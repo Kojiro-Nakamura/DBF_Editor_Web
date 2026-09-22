@@ -145,6 +145,7 @@ function buildSpreadsheetConfig(container, tableData, originalFields) {
         tableWidth: '100%',
         tableHeight: 'calc(100vh - 100px)', // ヘッダーと数式バー分を引いた高さ
         rowResize: true,
+        columnResize: true,
         columnDrag: true,
         columnSorting: false, // JSpreadsheet標準のソートを無効化（独自実装するため）
         wordWrap: false,
@@ -340,8 +341,10 @@ function setupEditorEvents(container) {
             const x = e.target.getAttribute('data-x');
             if (x !== null) {
                 const rect = e.target.getBoundingClientRect();
-                // 右端24pxの範囲（↓アイコン部分）をクリックした場合ソートを実行
-                if (e.clientX > rect.right - 24) {
+                const fromRight = rect.right - e.clientX;
+                // 右端6px以内はJSpreadsheetの列リサイズ判定に譲るため除外
+                // 6px〜24pxの範囲（↓アイコン部分）をクリックした場合のみソートを実行
+                if (fromRight >= 6 && fromRight <= 24) {
                     e.preventDefault();
                     e.stopPropagation();
                     
@@ -357,7 +360,38 @@ function setupEditorEvents(container) {
         if (e.target.tagName === 'TD' && e.target.closest('thead')) {
             const x = e.target.getAttribute('data-x');
             if (x !== null) {
+                const rect = e.target.getBoundingClientRect();
+                const fromRight = rect.right - e.clientX;
                 const instance = container.jexcel || jspreadsheetInstance;
+
+                // 右端のリサイズ境界付近をダブルクリックした場合は列幅の自動調整(Auto-fit)
+                if (fromRight >= 0 && fromRight <= 12) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const data = instance.options.data;
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+                    context.font = "14px 'Noto Sans JP', sans-serif";
+                    
+                    const title = instance.getHeader(parseInt(x));
+                    let maxWidth = context.measureText(title).width + 40; // アイコン等の余白分
+                    
+                    for (let r = 0; r < data.length; r++) {
+                        const val = String(data[r][parseInt(x)] || '');
+                        const width = context.measureText(val).width + 20; // 余白分
+                        if (width > maxWidth) {
+                            maxWidth = width;
+                        }
+                    }
+                    
+                    // 幅を50〜500pxの間にクランプして設定
+                    instance.setWidth(parseInt(x), Math.min(Math.max(maxWidth, 50), 500));
+                    triggerToolbarUpdate(container);
+                    return;
+                }
+                
+                // それ以外の場所をダブルクリックした場合は列名変更
                 const currentTitle = instance.getHeader(parseInt(x));
                 
                 showPrompt("列名の変更", "新しい列名を入力してください:", currentTitle, (newTitle) => {
