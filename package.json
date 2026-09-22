@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "encoding-japanese": "^2.4.0",
+    "jsdom": "^30.1.1",
     "jspreadsheet-ce": "^4.15.0",
     "jsuites": "^6.4.3"
   }

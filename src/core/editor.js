@@ -16,8 +16,8 @@ export function updateToolbarState(container) {
     const items = toolbar.querySelectorAll('i');
     let undoBtn, redoBtn;
     items.forEach(icon => {
-        if (icon.textContent.trim() === 'undo') undoBtn = icon.parentElement;
-        if (icon.textContent.trim() === 'redo') redoBtn = icon.parentElement;
+        if (icon.textContent.trim() === 'undo') undoBtn = icon;
+        if (icon.textContent.trim() === 'redo') redoBtn = icon;
     });
     
     if (undoBtn && redoBtn) {
